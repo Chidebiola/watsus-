@@ -1,2 +1,10 @@
 .DS_Store
 envswap
+envswap/lib/python3.9/site-packages/absl/flags/__pycache__/__init__.cpython-39.pyc
+*/__pycache__/*
+envswap/lib/python3.9/site-packages/absl/flags/__init__.py
+*.cpython-39.pyc
+/data/*
+src/ai/app/__pycache__/app.cpython-39.pyc
+src/ai/data/embeddings/*
+src/ai/data/embeddings/test/embedding_1.npy
