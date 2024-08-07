@@ -1,2 +1,6 @@
 .DS_Store
 node_modules/
+.babelrc
+env/
+jest.config.js
+ormconfig.json
