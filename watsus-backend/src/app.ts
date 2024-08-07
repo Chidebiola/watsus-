@@ -1,14 +1,16 @@
-import express from 'express';
-
+// src/app.ts
+const express = require('express');
 const app = express();
 
-app.use(express.json());  // Middleware for parsing JSON bodies
+app.use(express.json());
 
-// Define routes here
-app.get('/', (req, res) => {
-  res.send('Welcome to the Watsus API!');
+app.get('/users', (req, res) => {
+  res.status(200).json([]);
 });
 
-// More route definitions can go here
+app.post('/users', (req, res) => {
+  const { username, email, password } = req.body;
+  res.status(201).json({ username, email });
+});
 
-export default app;  // Export the configured Express app
+module.exports = app;
