@@ -1,0 +1,123 @@
+@@ -0,0 +1,44 @@
+import tensorflow as tf
+from tensorflow.keras.applications import EfficientNetB0
+from tensorflow.keras.applications.efficientnet import preprocess_input
+from tensorflow.keras.preprocessing import image as keras_image
+from PIL import Image
+import numpy as np
+import os
+
+# Function to save an image
+def save_image(image, label, index, output_dir):
+    img = Image.fromarray(image)
+    filename = f"{output_dir}/img_{index}_label_{label}.png"
+    os.makedirs(output_dir, exist_ok=True)
+    img.save(filename)
+
+# Function to create embeddings
+def create_embedding(image):
+    img = Image.fromarray(image).resize((224, 224))
+    img_array = keras_image.img_to_array(img)
+    img_array = np.expand_dims(img_array, axis=0)
+    img_array = preprocess_input(img_array)
+    embedding = model.predict(img_array)
+    return embedding
+
+# Load the fashion_mnist dataset
+(x_train, y_train), (x_test, y_test) = tf.keras.datasets.fashion_mnist.load_data()
+
+# Specify the directory where you want to save the images
+output_dir = 'data/embeddings'
+
+# Load the pre-trained EfficientNetB0 model
+model = EfficientNetB0(weights='imagenet', include_top=False, pooling='avg')
+
+# Iterate over the training set and save the images and embeddings
+for i, (image, label) in enumerate(zip(x_train[::3], y_train[::3])):  # Select every other 3 images
+    save_image(image, label, i, os.path.join(output_dir, 'train'))
+    embedding = create_embedding(image)
+    np.save(os.path.join(output_dir, 'train', f'embedding_{i}.npy'), embedding)
+
+# Iterate over the testing set and save the images and embeddings
+for i, (image, label) in enumerate(zip(x_test[::3], y_test[::3])):  # Select every other image
+    save_image(image, label, i, os.path.join(output_dir, 'test'))
+    embedding = create_embedding(image)
+    np.save(os.path.join(output_dir, 'test', f'embedding_{i}.npy'), embedding)
+ 65 changes: 65 additions & 0 deletions65  
+src/ai/filter.py
+Original file line number	Diff line number	Diff line change
+@@ -0,0 +1,65 @@
+import tensorflow as tf
+from tensorflow.keras.applications import EfficientNetB0
+from tensorflow.keras.applications.efficientnet import preprocess_input
+from tensorflow.keras.preprocessing import image as keras_image
+from PIL import Image
+import numpy as np
+import os
+from sklearn.metrics.pairwise import cosine_similarity
+
+
+
+# Function to create embeddings
+def create_embedding(image):
+    # Resize image to the input size required by EfficientNetB0
+    img = Image.fromarray(image).resize((224, 224))
+
+    # Convert image to array and preprocess it
+    img_array = keras_image.img_to_array(img)
+    img_array = np.expand_dims(img_array, axis=0)
+    img_array = preprocess_input(img_array)
+
+    # Generate embeddings
+    embedding = model.predict(img_array)
+    return embedding
+
+# Load the pre-trained EfficientNetB0 model
+model = EfficientNetB0(weights='imagenet', include_top=False, pooling='avg')
+
+# Function to load embeddings from files
+def load_embeddings(directory):
+    embeddings = []
+    filenames = []
+    for filename in os.listdir(directory):
+        if filename.endswith('.npy'):
+            embedding = np.load(os.path.join(directory, filename))
+            embeddings.append(embedding)
+            filenames.append(filename)
+    return np.vstack(embeddings), filenames
+
+# Load embeddings for train and test sets
+# Specify the directory where you want to get the images
+output_dir = 'data/embeddings'
+
+train_embeddings, train_filenames = load_embeddings(os.path.join(output_dir, 'train'))
+test_embeddings, test_filenames = load_embeddings(os.path.join(output_dir, 'test'))
+
+# Function to find top N similar images
+def find_similar_images(input_image, embeddings, filenames, top_n=100):
+    input_embedding = create_embedding(input_image)
+    similarities = cosine_similarity(input_embedding, embeddings)[0]
+    top_indices = np.argsort(similarities)[-top_n:][::-1]
+    return [filenames[i] for i in top_indices]
+
+# Example usage
+input_image = test_embeddings[0]  # Replace with any input image you want
+similar_images = find_similar_images(input_image, train_embeddings, train_filenames, top_n=100)
+
+#TODO Getting actual image
+# input_image = "data/sample_images/image.jpg"
+# image_embeding = create_embedding(input_image)
+# similar_images = find_similar_images(image_embeding, train_embeddings, train_filenames, top_n=100)
+
+print("Top 100 similar images:")
+for img in similar_images:
+    print(img)
+ 5 changes: 5 additions & 0 deletions5  
+src/ai/requirements.txt
+Original file line number	Diff line number	Diff line change
+@@ -0,0 +1,5 @@
+tensorflow
+keras
+pillow
+numpy
+scikit-learn
